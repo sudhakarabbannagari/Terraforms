@@ -8,4 +8,52 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
       steps:
-      
+      - task: TerraformTaskV4@4
+        displyname: 'TF init'
+        inputs:
+          provider: 'azurerm'
+          command: 'init'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform-AzureDevOps-Sample'
+          backendAzureRmUseEntraIdForAuthentication: true
+          backendServiceArm: 'Azure subscription 1(6b712e19-eadd-4b05-839f-7e71497ad7a6)'
+          backendAzureRmResourceGroupName: 'demo-resources'
+          backendAzureRmStorageAccountName: 'tfbackendsudhademo'
+          backendAzureRmContainerName: 'prod-tfstate'
+          backendAzureRmKey: 'prod.terraform.tfstate'
+      - task: TerraformTaskV4@4
+        displayname: 'TF validate'
+        inputs:
+          provider: 'azurerm'
+          command: 'validate'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform-AzureDevOps-Sample'
+      - task: TerraformTaskV4@4
+        displayname: 'format'
+        inputs:
+          provider: 'azurerm'
+          command: 'custom'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform-AzureDevOps-Sample'
+          outputTo: 'console'
+          customCommand: 'fmt'
+          environmentServiceNameAzureRM: 'Azure subscription 1(6b712e19-eadd-4b05-839f-7e71497ad7a6)'
+      - task: TerraformTaskV4@4
+        displayname: 'TF plan'
+        inputs:
+          provider: 'azurerm'
+          command: 'plan'
+          commandOptions: '-out $(Build.SourcesDirectory)/tfplanfile'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform-AzureDevOps-Sample'
+          environmentServiceNameAzureRM: 'Azure subscription 1(6b712e19-eadd-4b05-839f-7e71497ad7a6)'
+      - task: ArchiveFiles@2
+        displayname: 'Archive file'
+        inputs:
+          rootFolderOrFile: '$(Build.SourcesDirectory)'
+          includeRootFolder: true
+          archiveType: 'zip'
+          archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+          replaceExistingArchive: true
+      - task: PublishBuildArtifacts@1
+        displayname: 'Publish artifacts'
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          ArtifactName: '$(Build.BuildId)-build'
+          publishLocation: 'Container'
